@@ -4,8 +4,8 @@
  *  Created on: Oct 3, 2023
  *  Author: BerkN
  *
- *  TE Connectivity MS5611 sensor driver. 
- *  Platform independent C API. 
+ *  TE Connectivity MS5611 sensor driver.
+ *  Platform independent C API.
  *  Calibration and raw data transformation.
  *  SPI or I2C based communication.
  *  Adaptive to changed settings.
@@ -22,7 +22,8 @@
  *
  */
 
-#include "MS5611.h"
+#include <stddef.h>
+#include "ms5611.h"
 
 #define MS5611_DEFAULT_OSR          (MS5611_ULTRA_HIGH_RES)
 
@@ -48,7 +49,7 @@ MS5611_Device_t MS5611_NewDevice(void* intf, MS5611_Intf_e intf_type, MS5611_Rea
 
 int8_t MS5611_Init(MS5611_Device_t* dev){
     MS5611_Reset(dev);
-    MS5611_SetOversampling(dev, MS5611_DEFAULT_OSR);
+    MS5611_SetOSRate(dev, MS5611_DEFAULT_OSR);
     MS5611_InitConstants(dev, 0);
     dev->delay(20);
     return MS5611_PROM(dev);
@@ -104,7 +105,7 @@ uint16_t MS5611_ReadPROM(MS5611_Device_t* dev, uint8_t reg){
     return (temp[0] << 8) | temp[1];
 }
 
-void MS5611_SetOversampling(MS5611_Device_t* dev, MS5611_OSRate_t osr){
+void MS5611_SetOSRate(MS5611_Device_t* dev, MS5611_OSRate_t osr){
 
     const uint8_t osrToConversitonTime [] = {
         [MS5611_ULTRA_LOW_POWER] = 1,
@@ -123,31 +124,36 @@ MS5611_OSRate_t MS5611_GetOSRate(MS5611_Device_t* dev){
 
 int8_t MS5611_GetData(MS5611_Device_t* dev, float* pTemp, float* pPress){
 
+	int8_t rslt = MS5611_OK;
     uint32_t D1, D2;
 
-    MS5611_Convert(MS5611_CMD_CONV_D1);
+    MS5611_Convert(dev, MS5611_CMD_CONV_D1);
     dev->delay(dev->config.ct);
-    MS5611_AdcRead(dev, &D1);
+    rslt |= MS5611_AdcRead(dev, &D1);
 
-    MS5611_convert(MS5611_CMD_CONV_D2);
+    MS5611_Convert(dev, MS5611_CMD_CONV_D2);
     dev->delay(dev->config.ct);
-    MS5611_AdcRead(dev, &D2);
+    rslt |= MS5611_AdcRead(dev, &D2);
 
     MS5611_Data_t data = MS5611_RawDataProcess(dev, D1, D2, 1);
 	*pTemp = (float)data.temperature / 100.0f;
 	*pPress = (float)data.pressure / 100.0f;
+
+	return rslt;
 }
 
-void MS5611_ConvertCMD(MS5611_Device_t* dev, const uint8_t addr){
+void MS5611_Convert(MS5611_Device_t* dev, const uint8_t addr){
 	uint8_t cmd_convert = addr + (dev->config.osRate * 2);
     dev->write(dev->intf, cmd_convert, NULL, 0);
 }
 
 int8_t MS5611_AdcRead(MS5611_Device_t* dev, uint32_t* buffer){
+	int8_t rslt;
     uint8_t temp [3];
 
-    dev->read(dev->intf, MS5611_CMD_ADC_READ, temp, 3);
+    rslt = dev->read(dev->intf, MS5611_CMD_ADC_READ, temp, 3);
     *buffer = ((uint32_t)temp[0] << 16) | ((uint32_t)temp[1] << 8) | temp[2];
+    return rslt;
 }
 
 MS5611_Data_t MS5611_RawDataProcess(MS5611_Device_t* dev, uint32_t D1 , uint32_t D2, int8_t compensation){
