@@ -86,7 +86,7 @@ typedef struct MS5611_Device_s
 MS5611_Device_t MS5611_NewDevice(void* intf, MS5611_Intf_e intf_type, MS5611_Read_t readf, MS5611_Write_t writef, MS5611_Delay_t delayf);
 
 /*
- * @brief Initializes the MS5611 device by resetting it and loading the default settings.
+ * @brief Initializes the MS5611 device by resetting it and loading the PROM.
  *
  * @param[in] dev  : Pointer to the MS5611 device structure.
  *

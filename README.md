@@ -19,8 +19,11 @@ For updates and to report bugs, visit: [GitHub Repository](https://github.com/Be
 To create and initialize a new MS5611 device instance:
 
 ```c
-MS5611_Device_t ms5611_device = MS5611_NewDevice(interface, MS5611_INTF_I2C, read_function, write_function, delay_function);
+float temperature, pressure;
 
+MS5611_Device_t dev = MS5611_NewDevice(interface, MS5611_INTF_I2C, read_function, write_function, delay_function);
+MS5611_Init(&dev);
+MS5611_GetData(&dev, &temperature, &pressure);
 ```
 
 ### Functions Overview
